@@ -18,30 +18,35 @@ final class CategorizationService {
         // Normalize merchant name
         let normalized = normalizeMerchant(merchant)
         
-        // Rule-based keyword mapping
-        let (categoryName, confidence) = ruleBasedCategorization(normalized, amount: amount)
-        
-        // If confidence is low and smart categorization is enabled, use LLM
-        if confidence < 0.65 && smartCategorizationEnabled {
-            let allCategories = try await categoryRepository.fetchAll()
-            let categoryNames = allCategories.map { $0.name }
-            
+        // If smart categorization is enabled, always use LLM
+        if smartCategorizationEnabled {
             do {
                 let llmResponse = try await llmClient.categorize(
                     merchant: normalized,
-                    amount: amount,
-                    existingCategories: categoryNames
+                    amount: amount
                 )
                 
-                // Parse and validate LLM response
-                if let parsedCategory = JSONGuard.extractCategory(from: llmResponse),
-                   let category = try await categoryRepository.fetchAll().first(where: { $0.name == parsedCategory }) {
-                    return category
+                // Parse LLM response
+                if let parsedCategory = JSONGuard.extractCategory(from: llmResponse) {
+                    // Find or create the category
+                    let allCategories = try await categoryRepository.fetchAll()
+                    if let existingCategory = allCategories.first(where: { $0.name == parsedCategory }) {
+                        return existingCategory
+                    } else {
+                        // Create new category suggested by Gemma
+                        let newCategory = Category(name: parsedCategory, isSystem: false)
+                        try await categoryRepository.save(newCategory)
+                        return newCategory
+                    }
                 }
             } catch {
-                // Fallback to rule-based if LLM fails
+                print("⚠️ [CategorizationService] LLM categorization failed: \(error.localizedDescription), falling back to rule-based")
+                // Fall through to rule-based fallback
             }
         }
+        
+        // Fallback to rule-based categorization
+        let (categoryName, _) = ruleBasedCategorization(normalized, amount: amount)
         
         // Find or create category
         let allCategories = try await categoryRepository.fetchAll()

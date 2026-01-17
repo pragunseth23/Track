@@ -4,30 +4,43 @@ import SwiftData
 struct MainTabView: View {
     @ObservedObject var appState: AppState
     @Environment(\.modelContext) private var modelContext
+    @State private var selectedTab: Int = 0
+    
+    private let tabs: [NavTab] = [
+        NavTab(title: "Home", icon: "chart.line.uptrend.xyaxis"),
+        NavTab(title: "Transactions", icon: "list.bullet"),
+        NavTab(title: "Budgets", icon: "chart.bar.fill"),
+        NavTab(title: "Settings", icon: "gearshape.fill")
+    ]
     
     var body: some View {
-        TabView {
+        ZStack {
+            // Background
+            Color.backgroundPrimary
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Main content area
+                Group {
+                    switch selectedTab {
+                    case 0:
             HomeView(appState: appState)
-                .tabItem {
-                    Image(systemName: "house.fill")
-                }
-            
+                    case 1:
             TransactionsView()
-                .tabItem {
-                    Image(systemName: "list.bullet")
-                }
-            
-            BudgetsView()
-                .tabItem {
-                    Image(systemName: "chart.bar.fill")
-                }
-            
+                    case 2:
+                        BudgetsView()
+                    case 3:
             SettingsView(appState: appState)
-                .tabItem {
-                    Image(systemName: "gearshape.fill")
+                    default:
+                        HomeView(appState: appState)
                 }
         }
-        .accentColor(.accent)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // Liquid glass bottom nav bar
+                LiquidGlassNavBar(selectedTab: $selectedTab, tabs: tabs)
+            }
+        }
         .onAppear {
             Task {
                 await initializeCategories()

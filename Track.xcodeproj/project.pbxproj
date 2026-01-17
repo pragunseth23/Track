@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		224997E22F1B0CF400DFF2C1 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 22498F532F1B020000DFF2C1 /* MLX */; };
+		224997E32F1B0CF400DFF2C1 /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 22498F552F1B021000DFF2C1 /* PythonKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		226BAEC42F18C7FF0053B862 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,23 +34,6 @@
 		226BAECD2F18C7FF0053B862 /* TrackUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		226BAF252F18C84A0053B862 /* Exceptions for "TrackUITests" folder in "Track" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				README.md,
-			);
-			target = 226BAEB32F18C7FE0053B862 /* Track */;
-		};
-		226BAF262F18C84A0053B862 /* Exceptions for "TrackUITests" folder in "TrackUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				README.md,
-			);
-			target = 226BAECC2F18C7FF0053B862 /* TrackUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		226BAEB62F18C7FE0053B862 /* Track */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -59,10 +47,6 @@
 		};
 		226BAED02F18C7FF0053B862 /* TrackUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				226BAF252F18C84A0053B862 /* Exceptions for "TrackUITests" folder in "Track" target */,
-				226BAF262F18C84A0053B862 /* Exceptions for "TrackUITests" folder in "TrackUITests" target */,
-			);
 			path = TrackUITests;
 			sourceTree = "<group>";
 		};
@@ -73,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				224997E32F1B0CF400DFF2C1 /* PythonKit in Frameworks */,
+				224997E22F1B0CF400DFF2C1 /* MLX in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +119,8 @@
 			);
 			name = Track;
 			packageProductDependencies = (
+				22498F532F1B020000DFF2C1 /* MLX */,
+				22498F552F1B021000DFF2C1 /* PythonKit */,
 			);
 			productName = Track;
 			productReference = 226BAEB42F18C7FE0053B862 /* Track.app */;
@@ -216,6 +204,10 @@
 			);
 			mainGroup = 226BAEAB2F18C7FE0053B862;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				22498F522F1B020000DFF2C1 /* XCRemoteSwiftPackageReference "mlx-swift" */,
+				22498F542F1B021000DFF2C1 /* XCRemoteSwiftPackageReference "PythonKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 226BAEB52F18C7FE0053B862 /* Products */;
 			projectDirPath = "";
@@ -343,12 +335,14 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = iphoneos;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -401,11 +395,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				SDKROOT = iphoneos;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -439,7 +435,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -471,7 +466,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -599,6 +593,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		22498F522F1B020000DFF2C1 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.0;
+			};
+		};
+		22498F542F1B021000DFF2C1 /* XCRemoteSwiftPackageReference "PythonKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pvieito/PythonKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		22498F532F1B020000DFF2C1 /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 22498F522F1B020000DFF2C1 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
+		};
+		22498F552F1B021000DFF2C1 /* PythonKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 22498F542F1B021000DFF2C1 /* XCRemoteSwiftPackageReference "PythonKit" */;
+			productName = PythonKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 226BAEAC2F18C7FE0053B862 /* Project object */;
 }

@@ -7,7 +7,6 @@ final class AppState: ObservableObject {
     @Published var hasCompletedOnboarding: Bool
     @Published var monthlyBudget: Int?
     @Published var smartCategorizationEnabled: Bool
-    @Published var modelDownloader: ModelDownloader
     
     private let userDefaults: UserDefaults
     
@@ -16,7 +15,6 @@ final class AppState: ObservableObject {
         self.hasCompletedOnboarding = userDefaults.bool(forKey: "hasCompletedOnboarding")
         self.monthlyBudget = userDefaults.object(forKey: "monthlyBudget") as? Int
         self.smartCategorizationEnabled = userDefaults.bool(forKey: "smartCategorizationEnabled")
-        self.modelDownloader = ModelDownloader()
     }
     
     func completeOnboarding(monthlyBudget: Int?, smartCategorizationEnabled: Bool) {
@@ -34,5 +32,9 @@ final class AppState: ObservableObject {
     func updateSmartCategorization(_ enabled: Bool) {
         self.smartCategorizationEnabled = enabled
         userDefaults.set(enabled, forKey: "smartCategorizationEnabled")
+    }
+    
+    func createLLMClient() -> LLMClient {
+        return OnDeviceLLMClient()
     }
 }

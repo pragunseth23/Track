@@ -10,25 +10,61 @@ struct TransactionsView: View {
     @State private var showEditSheet = false
     
     var body: some View {
-        NavigationView {
-            List {
+        Group {
+            if transactions.isEmpty {
+                VStack(spacing: Spacing.md) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 48))
+                        .foregroundColor(.textTertiary)
+                    Text("NO TRANSACTIONS")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
+                    Text("Add transactions to start tracking your spending")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(Spacing.xxxxl)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
                 ForEach(groupedTransactions.keys.sorted(by: >), id: \.self) { date in
-                    Section(header: Text(formatDate(date))) {
-                        ForEach(groupedTransactions[date] ?? []) { transaction in
+                            // Date header
+                            HStack {
+                                Text(formatDate(date))
+                                    .font(.label)
+                                    .foregroundColor(.textTertiary)
+                                    .tracking(1.5)
+                                Spacer()
+                                Text("\(groupedTransactions[date]?.count ?? 0) transaction\(groupedTransactions[date]?.count == 1 ? "" : "s")")
+                                    .font(.caption)
+                                    .foregroundColor(.textTertiary)
+                            }
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.vertical, Spacing.md)
+                            .background(Color.backgroundSecondary)
+                            
+                            // Transactions for this date
+                            ForEach(Array((groupedTransactions[date] ?? []).enumerated()), id: \.element.id) { index, transaction in
                             TransactionRow(transaction: transaction)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     selectedTransaction = transaction
                                     showEditSheet = true
+                                    }
+                                    .padding(.horizontal, Spacing.lg)
+                                    .padding(.vertical, Spacing.sm)
+                                    .background(index % 2 == 0 ? Color.backgroundPrimary : Color.backgroundSecondary)
                                 }
                         }
+                    }
+                    .padding(.bottom, 80) // Space for bottom nav
                     }
                 }
             }
             .background(Color.backgroundPrimary)
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Transactions")
-            .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showEditSheet) {
                 if let transaction = selectedTransaction {
                     EditTransactionSheet(
@@ -36,7 +72,6 @@ struct TransactionsView: View {
                         categories: categories,
                         isPresented: $showEditSheet
                     )
-                }
             }
         }
     }
@@ -50,13 +85,13 @@ struct TransactionsView: View {
     private func formatDate(_ date: Date) -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
-            return "Today"
+            return "TODAY"
         } else if calendar.isDateInYesterday(date) {
-            return "Yesterday"
+            return "YESTERDAY"
         } else {
             let formatter = DateFormatter()
             formatter.dateFormat = "EEEE, MMM d"
-            return formatter.string(from: date)
+            return formatter.string(from: date).uppercased()
         }
     }
 }
@@ -65,28 +100,40 @@ struct TransactionRow: View {
     let transaction: Transaction
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(transaction.merchantClean)
                     .font(.bodyEmphasized)
                     .foregroundColor(.textPrimary)
-                HStack(spacing: 4) {
+                    .lineLimit(1)
+                HStack(spacing: Spacing.sm) {
                     Text(transaction.categoryNameSnapshot)
                         .font(.caption)
-                        .foregroundColor(.textSecondary)
+                        .foregroundColor(.textTertiary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, 3)
+                        .background(Color.surface)
+                        .cornerRadius(CornerRadius.small)
                     if transaction.isSubscription {
+                        HStack(spacing: 2) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10))
-                            .foregroundColor(.textSecondary)
+                                .font(.captionSmall)
+                                .foregroundColor(.accent)
+                            Text("RECURRING")
+                                .font(.labelSmall)
+                                .foregroundColor(.accent)
+                        }
                     }
                 }
             }
             Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
             Text(formatCurrency(transaction.amountCents))
                 .font(.numeric)
-                .foregroundColor(transaction.amountCents >= 0 ? .accent : .textPrimary)
+                    .foregroundColor(transaction.amountCents >= 0 ? .accentSecondary : .textPrimary)
+            }
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
     }
     
     private func formatCurrency(_ cents: Int) -> String {
@@ -103,6 +150,7 @@ struct EditTransactionSheet: View {
     @Bindable var transaction: Transaction
     let categories: [Category]
     @Binding var isPresented: Bool
+    @Environment(\.dismiss) private var dismiss
     
     @State private var selectedCategoryId: UUID
     @State private var note: String
@@ -120,9 +168,27 @@ struct EditTransactionSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("EDIT TRANSACTION")
+                    .font(.headerSmall)
+                    .foregroundColor(.textPrimary)
+                Spacer()
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .foregroundColor(.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(Spacing.lg)
+            .divider()
+            
             Form {
-                Section("Category") {
+                Section {
                     Menu {
                         ForEach(categories) { category in
                             Button(category.name) {
@@ -132,37 +198,49 @@ struct EditTransactionSheet: View {
                     } label: {
                         HStack {
                             Text("Category")
+                                .font(.body)
+                                .foregroundColor(.textPrimary)
                             Spacer()
                             Text(categories.first(where: { $0.id == selectedCategoryId })?.name ?? "Unknown")
+                                .font(.body)
                                 .foregroundColor(.textSecondary)
                         }
                     }
                 }
                 
-                Section("Details") {
+                Section {
                     Toggle("Subscription", isOn: $isSubscription)
+                        .font(.body)
                     TextField("Note", text: $note, axis: .vertical)
                         .lineLimit(3...6)
+                        .foregroundColor(.textPrimary)
+                        .font(.body)
                 }
             }
-            .background(Color.backgroundPrimary)
             .scrollContentBackground(.hidden)
-            .navigationTitle("Edit Transaction")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+            .background(Color.backgroundPrimary)
+            
+            // Footer with save button
+            HStack(spacing: Spacing.md) {
                     Button("Cancel") {
-                        isPresented = false
-                    }
+                    dismiss()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                .buttonStyle(.bordered)
+                .foregroundColor(.textSecondary)
+                
+                Spacer()
+                
                     Button("Save") {
                         saveTransaction()
-                    }
-                    .foregroundColor(.accent)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.accent)
             }
+            .padding(Spacing.lg)
+            .divider()
         }
+        .background(Color.backgroundPrimary)
+        .frame(width: 520, height: 420)
     }
     
     private func saveTransaction() {
@@ -174,6 +252,6 @@ struct EditTransactionSheet: View {
         transaction.isSubscription = isSubscription
         
         try? modelContext.save()
-        isPresented = false
+        dismiss()
     }
 }

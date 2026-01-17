@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct SettingsView: View {
     @ObservedObject var appState: AppState
@@ -11,215 +12,211 @@ struct SettingsView: View {
     @State private var exportData: ExportData?
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section("Smart Categorization") {
+        ScrollView {
+            VStack(spacing: Spacing.lg) {
+                // Smart Categorization
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("SMART CATEGORIZATION")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
+                    
                     Toggle("Smart Categorization", isOn: Binding(
                         get: { appState.smartCategorizationEnabled },
                         set: { appState.updateSmartCategorization($0) }
                     ))
+                    .toggleStyle(.switch)
+                    .tint(.accent)
                     
-                    // Hugging Face Token (for gated models)
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        HStack {
-                            Text("Hugging Face Token")
+                    if appState.smartCategorizationEnabled {
+                        if OnDeviceLLMClient.isModelAvailable {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.accentSecondary)
+                                Text("AI model available. Transactions will use AI categorization.")
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
+                        } else {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.textTertiary)
+                                Text("Model not available. Using rule-based matching only.")
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
+                        }
+                    }
+                }
+                .padding(Spacing.lg)
+                .dataCard()
+                
+                // AI Model
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("AI MODEL")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
+                    
+                    HStack {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 24))
+                            .foregroundColor(.accent)
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text("Phi-3.5-mini-instruct")
+                                .font(.bodyEmphasized)
+                                .foregroundColor(.textPrimary)
+                            Text("Q4 • \(OnDeviceLLMClient.getModelSize())")
                                 .font(.caption)
                                 .foregroundColor(.textSecondary)
-                            if UserDefaults.standard.string(forKey: "huggingFaceToken")?.isEmpty == false {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.statusOnTrack)
-                                    .font(.caption)
-                            }
                         }
-                        SecureField("hf_...", text: Binding(
-                            get: { UserDefaults.standard.string(forKey: "huggingFaceToken") ?? "" },
-                            set: { appState.modelDownloader.setHuggingFaceToken($0) }
-                        ))
-                        .textContentType(.password)
-                        .foregroundColor(.textPrimary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Required for gated models. Steps:")
-                                .font(.caption2)
-                                .foregroundColor(.textSecondary)
-                            HStack(spacing: 4) {
-                                Text("1. Accept model terms:")
-                                    .font(.caption2)
-                                    .foregroundColor(.textSecondary)
-                                if let url = appState.modelDownloader.getHuggingFaceModelURL() {
-                                    Link("Open Model Page", destination: url)
-                                        .font(.caption2)
-                                        .foregroundColor(.accent)
-                                }
-                            }
-                            HStack(spacing: 4) {
-                                Text("2. Get token:")
-                                    .font(.caption2)
-                                    .foregroundColor(.textSecondary)
-                                if let url = appState.modelDownloader.getHuggingFaceTokenURL() {
-                                    Link("Open Token Settings", destination: url)
-                                        .font(.caption2)
-                                        .foregroundColor(.accent)
-                                }
-                            }
-                            Text("3. Paste token above (starts with 'hf_')")
-                                .font(.caption2)
-                                .foregroundColor(.textSecondary)
-                        }
+                        Spacer()
                     }
-                    .padding(.vertical, Spacing.xs)
                     
-                    // Model Download Section
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        HStack {
-                            Text("AI Model")
-                                .foregroundColor(.textPrimary)
-                            Spacer()
-                            modelStatusView
-                        }
-                        
-                        if case .downloading(let progress) = appState.modelDownloader.downloadState {
-                            ProgressView(value: progress)
-                                .tint(.accent)
-                        }
-                        
-                        modelActionButton
-                    }
-                    .padding(.vertical, Spacing.xs)
-                }
-                
-                Section("Bank Connection") {
+                    Divider()
+                        .background(Color.divider)
+                    
                     HStack {
                         Text("Status")
+                            .font(.body)
+                            .foregroundColor(.textSecondary)
                         Spacer()
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.statusOnTrack)
-                            Text("Connected")
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: OnDeviceLLMClient.isModelAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(OnDeviceLLMClient.isModelAvailable ? .accentSecondary : .textTertiary)
+                            Text(OnDeviceLLMClient.isModelAvailable ? "Ready" : "Not Ready")
+                                .font(.bodySmall)
                                 .foregroundColor(.textSecondary)
                         }
                     }
+                    
+                    if !OnDeviceLLMClient.isModelAvailable {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text("To enable the model:")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            Text("1. Add 'phi-3.5-mini-instruct-MLX' to Copy Bundle Resources in Xcode")
+                                .font(.captionSmall)
+                                .foregroundColor(.textTertiary)
+                            Text("2. Install mlx-lm: pip3 install mlx-lm")
+                                .font(.captionSmall)
+                                .foregroundColor(.textTertiary)
+                            Button("Show Diagnostics") {
+                                let (_, diagnostics) = ModelVerification.verifySetup()
+                                print("📋 Model Setup Diagnostics:\n\(diagnostics)")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.accent)
+                            .buttonStyle(.plain)
+                            .padding(.top, Spacing.xs)
+                        }
+                    }
+                }
+                .padding(Spacing.lg)
+                .dataCard()
+                
+                // Bank Connection
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("BANK CONNECTION")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
+                    
+                    HStack {
+                        Text("Status")
+                            .font(.body)
+                            .foregroundColor(.textSecondary)
+                        Spacer()
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.accentSecondary)
+                            Text("Connected")
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+                    
+                    Divider()
+                        .background(Color.divider)
                     
                     Button("Disconnect") {
                         // TODO: Implement disconnect
                     }
                     .foregroundColor(.textPrimary)
+                    .buttonStyle(.bordered)
                 }
+                .padding(Spacing.lg)
+                .dataCard()
                 
-                Section("Data") {
-                    Button("Export All Data") {
-                        exportAllData()
-                    }
-                    .foregroundColor(.textPrimary)
+                // Data
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("DATA")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
                     
-                    Button(role: .destructive, action: {
-                        showResetAlert = true
-                    }) {
-                        Text("Reset All Data")
-                    }
-                }
-                
-                Section("Privacy") {
-                    Text("All data is stored locally on your device. No tracking, no cloud sync, no external services.")
-                        .font(.caption)
-                        .foregroundColor(.textSecondary)
-                }
-            }
-            .background(Color.backgroundPrimary)
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert("Reset All Data", isPresented: $showResetAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Reset", role: .destructive) {
-                    resetAllData()
-                }
-            } message: {
-                Text("This will delete all transactions, budgets, and categories. This action cannot be undone.")
-            }
-            .sheet(item: $exportData) { data in
-                ShareSheet(activityItems: [data.jsonData])
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var modelStatusView: some View {
-        switch appState.modelDownloader.downloadState {
-        case .notDownloaded:
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.down.circle")
-                    .foregroundColor(.textSecondary)
-                Text("Not Downloaded")
-                    .foregroundColor(.textSecondary)
-                    .font(.caption)
-            }
-        case .downloading(let progress):
-            HStack(spacing: 4) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                Text("\(Int(progress * 100))%")
-                    .foregroundColor(.textSecondary)
-                    .font(.caption)
-            }
-        case .downloaded:
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.statusOnTrack)
-                Text("Ready")
-                    .foregroundColor(.textSecondary)
-                    .font(.caption)
-            }
-        case .error(let message):
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.destructive)
-                Text("Error")
-                    .foregroundColor(.destructive)
-                    .font(.caption)
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var modelActionButton: some View {
-        switch appState.modelDownloader.downloadState {
-        case .notDownloaded, .error:
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Download the Gemma 2 2B Instruct model from Hugging Face for on-device AI categorization.")
-                            .font(.caption)
-                            .foregroundColor(.textSecondary)
-                        Text("Note: The downloaded model needs to be converted to CoreML format for iOS. See ModelDownloader.swift for conversion instructions.")
-                            .font(.caption2)
-                            .foregroundColor(.textSecondary)
-                            .italic()
-                        Button("Download Gemma 2 2B Model") {
+                    VStack(spacing: Spacing.sm) {
+                        Button("Generate Mock Data") {
                             Task {
-                                await appState.modelDownloader.downloadModel()
-                                // Reload model in LLM client if download succeeded
-                                if case .downloaded = appState.modelDownloader.downloadState {
-                                    // The OnDeviceLLMClient will automatically reload on next use
-                                }
+                                await generateMockData()
                             }
                         }
                         .foregroundColor(.accent)
+                        .buttonStyle(.bordered)
+                        .tint(.accent)
+                        .frame(maxWidth: .infinity)
+                        
+                        Button("Export All Data") {
+                            exportAllData()
+                        }
+                        .foregroundColor(.textPrimary)
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                        
+                        Button(role: .destructive, action: {
+                            showResetAlert = true
+                        }) {
+                            Text("Reset All Data")
+                        }
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
                     }
-        case .downloading:
-            Button("Downloading...") {
-                // Disabled during download
-            }
-            .foregroundColor(.textSecondary)
-            .disabled(true)
-        case .downloaded:
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Model Size: \(appState.modelDownloader.getModelSize())")
-                            .font(.caption)
-                            .foregroundColor(.textSecondary)
-                Button(role: .destructive, action: {
-                    appState.modelDownloader.deleteModel()
-                }) {
-                    Text("Delete Model")
                 }
+                .padding(Spacing.lg)
+                .dataCard()
+                
+                // Privacy
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("PRIVACY")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
+                    Text("All data is stored locally on your device. No tracking, no cloud sync, no external services.")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                        .lineSpacing(4)
+                }
+                .padding(Spacing.lg)
+                .dataCard()
             }
+            .padding(Spacing.lg)
+            .padding(.bottom, 80) // Space for bottom nav
+        }
+        .background(Color.backgroundPrimary)
+        .alert("Reset All Data", isPresented: $showResetAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                resetAllData()
+            }
+        } message: {
+            Text("This will delete all transactions, budgets, and categories. This action cannot be undone.")
+        }
+        .sheet(item: $exportData) { data in
+            ShareSheet(activityItems: [data.jsonData])
         }
     }
     
@@ -262,15 +259,30 @@ struct SettingsView: View {
     }
     
     private func resetAllData() {
-        // Delete all transactions
         for transaction in transactions {
             modelContext.delete(transaction)
         }
-        
-        // Note: Categories and budgets would also need to be deleted
-        // For MVP, we'll keep system categories
-        
         try? modelContext.save()
+    }
+    
+    private func generateMockData() async {
+        let categoryRepository = CategoryRepository(modelContext: modelContext)
+        let llmClient = appState.createLLMClient()
+        let categorizationService = CategorizationService(
+            llmClient: llmClient,
+            categoryRepository: categoryRepository
+        )
+        let mockDataService = MockDataService(
+            modelContext: modelContext,
+            categoryRepository: categoryRepository,
+            categorizationService: categorizationService
+        )
+        
+        do {
+            try await mockDataService.generateMockTransactions()
+        } catch {
+            print("Failed to generate mock data: \(error)")
+        }
     }
 }
 
@@ -279,12 +291,62 @@ struct ExportData: Identifiable {
     let jsonData: String
 }
 
-struct ShareSheet: UIViewControllerRepresentable {
+struct ShareSheet: View {
     let activityItems: [Any]
+    @Environment(\.dismiss) private var dismiss
     
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("EXPORT DATA")
+                    .font(.headerSmall)
+                    .foregroundColor(.textPrimary)
+                Spacer()
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .foregroundColor(.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(Spacing.lg)
+            .divider()
+            
+            ScrollView {
+                if let jsonString = activityItems.first as? String {
+                    Text(jsonString)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.textPrimary)
+                        .textSelection(.enabled)
+                        .padding(Spacing.lg)
+                }
+            }
+            
+            // Footer
+            HStack {
+                Button("Copy to Clipboard") {
+                    if let jsonString = activityItems.first as? String {
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        pasteboard.setString(jsonString, forType: .string)
+                    }
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.accent)
+                
+                Button("Close") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(Spacing.lg)
+            .divider()
+        }
+        .background(Color.backgroundPrimary)
+        .frame(width: 600, height: 500)
     }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

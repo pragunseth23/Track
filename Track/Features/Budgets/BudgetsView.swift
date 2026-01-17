@@ -18,19 +18,25 @@ struct BudgetsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            Group {
+        ScrollView {
+            VStack(spacing: Spacing.lg) {
                 if currentMonthBudgets.isEmpty {
-                    VStack {
-                        Spacer()
-                        Text("No budgets set")
-                            .font(.body)
+                    VStack(spacing: Spacing.md) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.textTertiary)
+                        Text("NO BUDGETS SET")
+                            .font(.label)
+                            .foregroundColor(.textTertiary)
+                            .tracking(1.5)
+                        Text("Create a budget to track spending limits")
+                            .font(.bodySmall)
                             .foregroundColor(.textSecondary)
-                        Spacer()
+                            .multilineTextAlignment(.center)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(Spacing.xxxxl)
                 } else {
-                    List {
                         ForEach(currentMonthBudgets) { budget in
                             BudgetCard(
                                 budget: budget,
@@ -45,22 +51,27 @@ struct BudgetsView: View {
                                 }
                             )
                         }
-                    }
-                    .listStyle(.plain)
                 }
             }
+            .padding(Spacing.lg)
+            .padding(.bottom, 80) // Space for bottom nav
+            }
             .background(Color.backgroundPrimary)
-            .navigationTitle("Budgets")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+        .overlay(alignment: .bottomTrailing) {
                     Button(action: {
                         showAddBudgetSheet = true
                     }) {
                         Image(systemName: "plus")
-                            .foregroundColor(.accent)
-                    }
-                }
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.textPrimary)
+                    .frame(width: 56, height: 56)
+                    .background(Color.accent)
+                    .clipShape(Circle())
+                    .shadow(color: .accent.opacity(0.3), radius: 8)
+            }
+            .buttonStyle(.plain)
+            .padding(Spacing.lg)
+            .padding(.bottom, 80) // Above bottom nav
             }
             .sheet(isPresented: $showAddBudgetSheet) {
                 AddBudgetSheet(
@@ -68,7 +79,6 @@ struct BudgetsView: View {
                     existingBudgets: currentMonthBudgets,
                     isPresented: $showAddBudgetSheet
                 )
-            }
         }
     }
 }
@@ -102,21 +112,57 @@ struct BudgetCard: View {
         return Double(spent) / Double(budget.limitCents) * 100
     }
     
+    private var remaining: Int {
+        max(0, budget.limitCents - spent)
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                Text(category?.name ?? "Unknown")
-                    .font(.headline)
-                    .foregroundColor(.textPrimary)
-                Spacer()
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text(category?.name.uppercased() ?? "UNKNOWN")
+                        .font(.label)
+                        .foregroundColor(.textTertiary)
+                        .tracking(1.5)
                 if budget.limitCents > 0 {
                     Text("\(formatCurrency(spent)) / \(formatCurrency(budget.limitCents))")
-                        .font(.numeric)
+                            .font(.numericLarge)
                         .foregroundColor(.textPrimary)
+                        Text("\(formatCurrency(remaining)) remaining")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
                 } else {
                     Text(formatCurrency(spent))
+                            .font(.numericLarge)
+                            .foregroundColor(.textPrimary)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: Spacing.sm) {
+                    if budget.limitCents > 0 {
+                        Text("\(String(format: "%.0f", percentage))%")
                         .font(.numeric)
-                        .foregroundColor(.textPrimary)
+                            .foregroundColor(progressColor)
+                    }
+                    if percentage >= 70 && percentage < 90 {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.captionSmall)
+                                .foregroundColor(.accentWarning)
+                            Text("WARNING")
+                                .font(.labelSmall)
+                                .foregroundColor(.accentWarning)
+                        }
+                    } else if percentage >= 90 {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.captionSmall)
+                                .foregroundColor(.accentError)
+                            Text("OVER BUDGET")
+                                .font(.labelSmall)
+                                .foregroundColor(.accentError)
+                        }
+                    }
                 }
             }
             
@@ -124,52 +170,41 @@ struct BudgetCard: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Rectangle()
-                            .fill(Color.textSecondary.opacity(0.2))
-                            .frame(height: 9) // 6 * 1.5 = 9
+                            .fill(Color.surface)
+                            .frame(height: 8)
                         
                         Rectangle()
                             .fill(progressColor)
-                            .frame(width: min(geometry.size.width, geometry.size.width * CGFloat(percentage / 100)), height: 9) // 6 * 1.5 = 9
+                            .frame(
+                                width: min(
+                                    geometry.size.width,
+                                    geometry.size.width * CGFloat(percentage / 100)
+                                ),
+                                height: 8
+                            )
                     }
                 }
-                .frame(height: 9) // 6 * 1.5 = 9
-                
-                HStack(spacing: Spacing.sm) {
-                    if percentage >= 70 && percentage < 90 {
-                        Image(systemName: "info.circle")
-                            .font(.caption)
-                            .foregroundColor(.statusTrendingHigh)
-                    } else if percentage >= 90 {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.caption)
-                            .foregroundColor(.destructive)
-                    }
-                    Spacer()
-                }
+                .frame(height: 8)
             }
         }
-        .padding(Spacing.lg)
-        .darkCard()
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+        .dataCard()
+        .contextMenu {
             Button(action: {
                 showEditSheet = true
             }) {
                 Label("Edit", systemImage: "pencil")
             }
-            .tint(.accent)
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
     
     private var progressColor: Color {
         if percentage >= 90 {
-            return .destructive
+            return .accentError
         } else if percentage >= 70 {
-            return .statusTrendingHigh
+            return .accentWarning
         } else {
             return .accent
         }
@@ -188,6 +223,7 @@ struct AddBudgetSheet: View {
     let categories: [Category]
     let existingBudgets: [Budget]
     @Binding var isPresented: Bool
+    @Environment(\.dismiss) private var dismiss
     
     @State private var categoryName: String = ""
     @State private var budgetAmount: String = ""
@@ -196,49 +232,75 @@ struct AddBudgetSheet: View {
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("ADD BUDGET")
+                    .font(.headerSmall)
+                    .foregroundColor(.textPrimary)
+                Spacer()
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .foregroundColor(.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(Spacing.lg)
+            .divider()
+            
             Form {
-                Section("Category") {
+                Section {
                     TextField("Category Name", text: $categoryName)
                         .foregroundColor(.textPrimary)
+                        .font(.body)
                 }
                 
-                Section("Budget Amount") {
+                Section {
                     HStack {
                         Text("$")
                             .foregroundColor(.textSecondary)
+                            .font(.numeric)
                         TextField("0", text: $budgetAmount)
-                            .keyboardType(.decimalPad)
                             .foregroundColor(.textPrimary)
+                            .font(.numeric)
                     }
                 }
                 
                 if let error = errorMessage {
                     Section {
                         Text(error)
-                            .foregroundColor(.destructive)
+                            .foregroundColor(.accentError)
                             .font(.caption)
                     }
                 }
             }
-            .background(Color.backgroundPrimary)
             .scrollContentBackground(.hidden)
-            .navigationTitle("Add Budget")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+            .background(Color.backgroundPrimary)
+            
+            // Footer
+            HStack(spacing: Spacing.md) {
                     Button("Cancel") {
-                        isPresented = false
-                    }
+                    dismiss()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                .buttonStyle(.bordered)
+                .foregroundColor(.textSecondary)
+                
+                Spacer()
+                
                     Button("Save") {
                         saveBudget()
-                    }
-                    .foregroundColor(.accent)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.accent)
             }
+            .padding(Spacing.lg)
+            .divider()
         }
+        .background(Color.backgroundPrimary)
+        .frame(width: 520, height: 320)
     }
     
     private func saveBudget() {
@@ -252,7 +314,6 @@ struct AddBudgetSheet: View {
             return
         }
         
-        // Check if budget already exists for this category
         let calendar = Calendar.current
         let startOfMonth = calendar.dateInterval(of: .month, for: Date())?.start ?? Date()
         
@@ -269,7 +330,6 @@ struct AddBudgetSheet: View {
             )
             modelContext.insert(budget)
         } else {
-            // Create new category
             let newCategory = Category(name: categoryName, isSystem: false)
             modelContext.insert(newCategory)
             
@@ -282,6 +342,6 @@ struct AddBudgetSheet: View {
         }
         
         try? modelContext.save()
-        isPresented = false
+        dismiss()
     }
 }

@@ -14,15 +14,18 @@ struct HomeView: View {
     @State private var categorySpending: [(name: String, value: Double, color: Color)] = []
     @State private var currentInsight: Insight?
     @State private var showCategoryDetail = false
+    @State private var isGeneratingInsight = false
     
     private var insightsService: InsightsService {
         let transactionRepository = TransactionRepository(modelContext: modelContext)
         let budgetRepository = BudgetRepository(modelContext: modelContext)
         let insightRepository = InsightRepository(modelContext: modelContext)
+        let llmClient = appState.createLLMClient()
         return InsightsService(
             transactionRepository: transactionRepository,
             budgetRepository: budgetRepository,
-            insightRepository: insightRepository
+            insightRepository: insightRepository,
+            llmClient: llmClient
         )
     }
     
@@ -31,89 +34,158 @@ struct HomeView: View {
     }
     
     var body: some View {
-        NavigationView {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
-                    // Month to Date card
+                // Header with budget status - Full width card
+                HStack(alignment: .top, spacing: Spacing.xl) {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Month to Date")
-                            .font(.subheadline)
-                            .foregroundColor(.textSecondary)
+                        Text("MONTH TO DATE")
+                            .font(.label)
+                            .foregroundColor(.textTertiary)
+                            .tracking(1.5)
                         Text(formatCurrency(monthToDateTotal))
                             .font(.numericXLarge)
                             .foregroundColor(.textPrimary)
                         if momChange != 0 {
-                            Text("\(momChange >= 0 ? "+" : "")\(String(format: "%.0f", momChange))% vs last month")
+                            HStack(spacing: Spacing.xs) {
+                                Image(systemName: momChange >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                    .font(.captionSmall)
+                                    .foregroundColor(momChange >= 0 ? .textSecondary : .accentError)
+                                Text("\(String(format: "%.1f", abs(momChange)))% vs last month")
                                 .font(.caption)
-                                .foregroundColor(momChange >= 0 ? .textSecondary : .destructive)
+                                    .foregroundColor(momChange >= 0 ? .textSecondary : .accentError)
+                            }
+                            .padding(.top, Spacing.xs)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Spacing.lg)
-                    .darkCard()
-                    
-                    // Spending by Category card
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: Spacing.sm) {
+                        Text("STATUS")
+                            .font(.label)
+                            .foregroundColor(.textTertiary)
+                            .tracking(1.5)
+                        Text(budgetStatus.text)
+                            .font(.numericLarge)
+                            .foregroundColor(budgetStatus.color)
+                            .tracking(3)
+                    }
+                }
+                .dataCard()
+                
+                // Grid layout for data cards - Equal height
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: Spacing.lg),
+                    GridItem(.flexible(), spacing: Spacing.lg)
+                ], spacing: Spacing.lg) {
+                    // Spending by Category
                     Button(action: {
                         showCategoryDetail = true
                     }) {
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             HStack {
-                                Text("Spending by Category")
-                                    .font(.headline)
-                                    .foregroundColor(.textPrimary)
+                                Text("SPENDING BY CATEGORY")
+                                    .font(.label)
+                                    .foregroundColor(.textTertiary)
+                                    .tracking(1.5)
                                 Spacer()
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.textSecondary)
+                                    .font(.caption)
+                                    .foregroundColor(.textTertiary)
                             }
                             
                             if !categorySpending.isEmpty {
-                                PieChartView(data: categorySpending, size: 200)
+                                PieChartView(data: categorySpending, size: 180)
                                     .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Spacing.sm)
+                                
+                                // Top 3 categories
+                                VStack(alignment: .leading, spacing: Spacing.xs) {
+                                    ForEach(Array(categorySpending.prefix(3).enumerated()), id: \.offset) { index, item in
+                                        HStack(spacing: Spacing.sm) {
+                                            Circle()
+                                                .fill(item.color)
+                                                .frame(width: 10, height: 10)
+                                            Text(item.name)
+                                                .font(.bodySmall)
+                                                .foregroundColor(.textSecondary)
+                                            Spacer()
+                                            Text(formatCurrency(item.value))
+                                                .font(.numericSmall)
+                                                .foregroundColor(.textPrimary)
+                                        }
+                                    }
+                                }
+                                .padding(.top, Spacing.xs)
                             } else {
+                                VStack(spacing: Spacing.sm) {
+                                    Image(systemName: "chart.pie.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.textTertiary)
                                 Text("No spending data")
-                                    .font(.body)
-                                    .foregroundColor(.textSecondary)
+                                        .font(.bodySmall)
+                                        .foregroundColor(.textTertiary)
+                                }
                                     .frame(maxWidth: .infinity)
                                     .padding(Spacing.xxl)
                             }
                         }
-                        .padding(Spacing.lg)
-                        .darkCard()
+                        .frame(maxWidth: .infinity, minHeight: CardDimensions.standardHeight, alignment: .top)
                     }
+                    .buttonStyle(.plain)
+                    .dataCard()
                     
-                    // Insights card
-                    if let insight = currentInsight {
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("Insight")
-                                .font(.headline)
-                                .foregroundColor(.textPrimary)
-                            Text(insight.text)
-                                .font(.body)
-                                .foregroundColor(.textSecondary)
+                    // Insights card - Equal height
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        HStack {
+                            Text("AI INSIGHT")
+                                .font(.label)
+                                .foregroundColor(.textTertiary)
+                                .tracking(1.5)
+                            Spacer()
+                            Button(action: {
+                                Task {
+                                    isGeneratingInsight = true
+                                    await generateInsight()
+                                    isGeneratingInsight = false
+                                }
+                            }) {
+                                if isGeneratingInsight {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .tint(.accent)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.caption)
+                                        .foregroundColor(.accent)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isGeneratingInsight)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(Spacing.lg)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                        )
+                        
+                    if let insight = currentInsight {
+                            Text(insight.text)
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                                .lineSpacing(6)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                Text("Tap refresh to generate insights based on your transactions.")
+                                    .font(.bodySmall)
+                                    .foregroundColor(.textTertiary)
+                                    .lineSpacing(6)
+                            }
+                        }
                     }
-                }
-                .padding(Spacing.lg)
-            }
-            .background(Color.backgroundPrimary)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(budgetStatus.text)
-                        .font(.system(size: 32, weight: .medium, design: .monospaced))
-                        .foregroundColor(budgetStatus.color)
-                        .textCase(.uppercase)
-                        .tracking(2)
-                        .shadow(color: budgetStatus.color.opacity(0.4), radius: 4)
+                    .frame(maxWidth: .infinity, minHeight: CardDimensions.standardHeight, alignment: .top)
+                    .dataCard()
                 }
             }
+            .padding(Spacing.lg)
+            .padding(.bottom, 80) // Space for bottom nav
+        }
+        .background(Color.backgroundPrimary)
             .onAppear {
                 Task {
                     await loadData()
@@ -124,7 +196,6 @@ struct HomeView: View {
                     data: categorySpending,
                     isPresented: $showCategoryDetail
                 )
-            }
         }
     }
     
@@ -167,12 +238,12 @@ struct HomeView: View {
         
         let colors: [Color] = [
             .accent,
-            .statusOnTrack,
-            .statusTrendingHigh,
-            .destructive,
+            .accentSecondary,
+            .accentWarning,
+            .accentError,
             Color(hex: "9D4EDD"), // purple
             Color(hex: "FF006E"), // pink
-            Color(hex: "00D9FF"), // cyan (accent)
+            Color(hex: "00D9FF"), // cyan
             Color(hex: "84FF00"), // lime
             Color(hex: "FF8500"), // orange
             Color(hex: "5A67D8")  // indigo
@@ -188,19 +259,41 @@ struct HomeView: View {
             budgetStatus = .onTrack
         }
         
-        // Load or generate insight
+        // Load existing insight if available
         do {
             let insightRepository = InsightRepository(modelContext: modelContext)
             if let existing = try await insightRepository.fetchForMonth(now) {
                 currentInsight = existing
-            } else {
-                currentInsight = try await insightsService.generateInsight(
-                    for: now,
-                    smartCategorizationEnabled: appState.smartCategorizationEnabled
-                )
             }
         } catch {
-            // Handle error
+            print("❌ [HomeView] Failed to load insight: \(error.localizedDescription)")
+        }
+    }
+    
+    @MainActor
+    private func generateInsight() async {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        do {
+            let insight = try await insightsService.generateInsight(
+                for: now,
+                smartCategorizationEnabled: appState.smartCategorizationEnabled
+            )
+            currentInsight = insight
+        } catch {
+            let monthStart = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            if monthToDateTotal > 0 {
+                currentInsight = Insight(
+                    month: monthStart,
+                    text: "Spent \(formatCurrency(monthToDateTotal)) this month. Unable to generate AI insight - check console for errors."
+                )
+            } else {
+                currentInsight = Insight(
+                    month: monthStart,
+                    text: "No transactions yet. Add transactions and try again."
+                )
+            }
         }
     }
     
@@ -211,27 +304,54 @@ struct HomeView: View {
         formatter.currencyCode = "USD"
         return formatter.string(from: NSNumber(value: dollars)) ?? "$0.00"
     }
+    
+    private func formatCurrency(_ cents: Double) -> String {
+        let dollars = cents / 100.0
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: NSNumber(value: dollars)) ?? "$0.00"
+    }
 }
 
 struct CategoryDetailModal: View {
     let data: [(name: String, value: Double, color: Color)]
     @Binding var isPresented: Bool
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("SPENDING BY CATEGORY")
+                    .font(.headerSmall)
+                    .foregroundColor(.textPrimary)
+                Spacer()
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .foregroundColor(.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(Spacing.lg)
+            .divider()
+            
             ScrollView {
                 VStack(spacing: Spacing.xl) {
-                    PieChartView(data: data, size: 250)
+                    PieChartView(data: data, size: 280)
                         .padding(.top, Spacing.xl)
                     
                     VStack(alignment: .leading, spacing: Spacing.md) {
                         ForEach(data, id: \.name) { item in
-                            HStack {
+                            HStack(spacing: Spacing.md) {
                                 Circle()
                                     .fill(item.color)
                                     .frame(width: 12, height: 12)
                                 Text(item.name)
-                                    .font(.headline)
+                                    .font(.bodyEmphasized)
                                     .foregroundColor(.textPrimary)
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
@@ -240,27 +360,22 @@ struct CategoryDetailModal: View {
                                         .foregroundColor(.textPrimary)
                                     Text("\(String(format: "%.0f", (item.value / data.reduce(0.0) { $0 + $1.value }) * 100))%")
                                         .font(.caption)
-                                        .foregroundColor(.textSecondary)
+                                        .foregroundColor(.textTertiary)
                                 }
                             }
                             .padding(.vertical, Spacing.sm)
+                            if item.name != data.last?.name {
+                                Divider()
+                                    .background(Color.divider)
+                            }
                         }
                     }
                     .padding(Spacing.lg)
                 }
             }
-            .background(Color.backgroundPrimary)
-            .navigationTitle("Spending by Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        isPresented = false
-                    }
-                    .foregroundColor(.accent)
-                }
-            }
         }
+            .background(Color.backgroundPrimary)
+        .frame(width: 650, height: 650)
     }
     
     private func formatCurrency(_ cents: Double) -> String {

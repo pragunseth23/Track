@@ -54,10 +54,9 @@ struct OnboardingView: View {
                         TextField("0", text: $monthlyBudget)
                             .font(.numeric)
                             .foregroundColor(.textPrimary)
-                            .keyboardType(.decimalPad)
                     }
                     .padding(Spacing.md)
-                    .darkCard()
+                    .dataCard()
                     
                     Toggle("Smart Categorization", isOn: $smartCategorizationEnabled)
                         .foregroundColor(.textPrimary)
@@ -87,7 +86,6 @@ struct OnboardingView: View {
             .background(Color.backgroundPrimary)
             .tag(2)
         }
-        .tabViewStyle(.page)
-        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .tabViewStyle(.automatic)
     }
 }
