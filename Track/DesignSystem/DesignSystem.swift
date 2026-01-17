@@ -2,34 +2,38 @@ import SwiftUI
 
 // MARK: - Color System
 extension Color {
-    // Deep black backgrounds
-    static let backgroundPrimary = Color(hex: "000000")
-    static let backgroundSecondary = Color(hex: "0A0A0A")
-    static let backgroundTertiary = Color(hex: "141414")
-    static let surface = Color(hex: "1A1A1A")
-    static let surfaceElevated = Color(hex: "242424")
+    // Technical framework backgrounds - structured grays
+    static let backgroundPrimary = Color(hex: "0F0F0F")
+    static let backgroundSecondary = Color(hex: "141414")
+    static let backgroundTertiary = Color(hex: "1A1A1A")
+    static let surface = Color(hex: "1E1E1E")
+    static let surfaceElevated = Color(hex: "252525")
+    static let surfaceHover = Color(hex: "2A2A2A")
     
-    // High contrast text
-    static let textPrimary = Color(hex: "FFFFFF")
-    static let textSecondary = Color(hex: "B0B0B0")
-    static let textTertiary = Color(hex: "707070")
+    // High contrast text - technical precision
+    static let textPrimary = Color(hex: "F5F5F5")
+    static let textSecondary = Color(hex: "A0A0A0")
+    static let textTertiary = Color(hex: "6B6B6B")
+    static let textMuted = Color(hex: "4A4A4A")
     
-    // Accent colors (analytical, data-focused)
-    static let accent = Color(hex: "00D9FF") // Cyan
-    static let accentSecondary = Color(hex: "00FF88") // Green
-    static let accentWarning = Color(hex: "FFAA00") // Amber
-    static let accentError = Color(hex: "FF4444") // Red
+    // Technical accent colors - structured and professional
+    static let accent = Color(hex: "3B82F6") // Technical blue
+    static let accentSecondary = Color(hex: "10B981") // Success green
+    static let accentWarning = Color(hex: "F59E0B") // Warning amber
+    static let accentError = Color(hex: "EF4444") // Error red
+    static let accentInfo = Color(hex: "6366F1") // Info indigo
     
-    // Status colors
-    static let statusOnTrack = Color(hex: "00FF88")
-    static let statusTrendingHigh = Color(hex: "FFAA00")
-    static let statusOverBudget = Color(hex: "FF4444")
-    static let statusNeutral = Color(hex: "B0B0B0")
+    // Status colors - data indicators
+    static let statusOnTrack = Color(hex: "10B981")
+    static let statusTrendingHigh = Color(hex: "F59E0B")
+    static let statusOverBudget = Color(hex: "EF4444")
+    static let statusNeutral = Color(hex: "6B7280")
     
-    // Borders and dividers
-    static let borderPrimary = Color.white.opacity(0.1)
-    static let borderSecondary = Color.white.opacity(0.05)
-    static let divider = Color.white.opacity(0.08)
+    // Borders and dividers - structured separation
+    static let borderPrimary = Color.white.opacity(0.12)
+    static let borderSecondary = Color.white.opacity(0.08)
+    static let divider = Color.white.opacity(0.1)
+    static let dividerStrong = Color.white.opacity(0.15)
     
     // Hex initializer
     init(hex: String) {
@@ -57,34 +61,37 @@ extension Color {
     }
 }
 
-// MARK: - Typography (Data-focused, monospaced for numbers)
+// MARK: - Typography (Technical, structured hierarchy)
 extension Font {
-    // Headers
-    static let headerLarge = Font.system(size: 32, weight: .semibold, design: .default)
-    static let headerMedium = Font.system(size: 24, weight: .semibold, design: .default)
-    static let headerSmall = Font.system(size: 20, weight: .semibold, design: .default)
+    // Headers - structured hierarchy
+    static let headerLarge = Font.system(size: 28, weight: .semibold, design: .default)
+    static let headerMedium = Font.system(size: 22, weight: .semibold, design: .default)
+    static let headerSmall = Font.system(size: 18, weight: .semibold, design: .default)
+    static let headerTiny = Font.system(size: 14, weight: .semibold, design: .default)
     
-    // Body
-    static let bodyLarge = Font.system(size: 17, weight: .regular, design: .default)
-    static let body = Font.system(size: 15, weight: .regular, design: .default)
+    // Body - readable technical text
+    static let bodyLarge = Font.system(size: 16, weight: .regular, design: .default)
+    static let body = Font.system(size: 14, weight: .regular, design: .default)
     static let bodySmall = Font.system(size: 13, weight: .regular, design: .default)
-    static let bodyEmphasized = Font.system(size: 17, weight: .medium, design: .default)
+    static let bodyEmphasized = Font.system(size: 14, weight: .semibold, design: .default)
     
-    // Monospaced (for numbers/data)
-    static let numericXLarge = Font.system(size: 36, weight: .medium, design: .monospaced)
-    static let numericLarge = Font.system(size: 28, weight: .medium, design: .monospaced)
-    static let numeric = Font.system(size: 17, weight: .medium, design: .monospaced)
-    static let numericSmall = Font.system(size: 15, weight: .medium, design: .monospaced)
-    static let numericTiny = Font.system(size: 13, weight: .medium, design: .monospaced)
+    // Monospaced (for numbers/data/metrics)
+    static let numericXLarge = Font.system(size: 32, weight: .semibold, design: .monospaced)
+    static let numericLarge = Font.system(size: 24, weight: .semibold, design: .monospaced)
+    static let numeric = Font.system(size: 16, weight: .semibold, design: .monospaced)
+    static let numericSmall = Font.system(size: 14, weight: .semibold, design: .monospaced)
+    static let numericTiny = Font.system(size: 12, weight: .semibold, design: .monospaced)
     
-    // Labels
-    static let label = Font.system(size: 12, weight: .medium, design: .default)
-    static let labelSmall = Font.system(size: 11, weight: .medium, design: .default)
+    // Labels - technical metadata
+    static let label = Font.system(size: 11, weight: .semibold, design: .default)
+    static let labelSmall = Font.system(size: 10, weight: .semibold, design: .default)
+    static let labelUppercase = Font.system(size: 11, weight: .semibold, design: .default)
     static let caption = Font.system(size: 12, weight: .regular, design: .default)
     static let captionSmall = Font.system(size: 11, weight: .regular, design: .default)
+    static let code = Font.system(size: 13, weight: .regular, design: .monospaced)
 }
 
-// MARK: - Spacing (Tight, data-dense)
+// MARK: - Spacing (Structured grid system)
 enum Spacing {
     static let xs: CGFloat = 4
     static let sm: CGFloat = 8
@@ -94,14 +101,23 @@ enum Spacing {
     static let xxl: CGFloat = 24
     static let xxxl: CGFloat = 32
     static let xxxxl: CGFloat = 48
+    
+    // Technical spacing - structured grid
+    static let gridUnit: CGFloat = 4
+    static let grid2: CGFloat = 8
+    static let grid3: CGFloat = 12
+    static let grid4: CGFloat = 16
+    static let grid6: CGFloat = 24
+    static let grid8: CGFloat = 32
 }
 
-// MARK: - Corner Radius (Minimal, sharp)
+// MARK: - Corner Radius (Minimal, technical)
 enum CornerRadius {
     static let none: CGFloat = 0
-    static let small: CGFloat = 4
-    static let medium: CGFloat = 6
-    static let large: CGFloat = 8
+    static let small: CGFloat = 3
+    static let medium: CGFloat = 4
+    static let large: CGFloat = 6
+    static let xlarge: CGFloat = 8
 }
 
 // MARK: - Card Dimensions (Consistent sizing)
@@ -112,46 +128,60 @@ enum CardDimensions {
     static let largeHeight: CGFloat = 280
 }
 
-// MARK: - View Modifiers (Cards and surfaces)
+// MARK: - View Modifiers (Technical framework components)
 extension View {
-    /// Data card with subtle border and consistent sizing
+    /// Technical data panel - structured container
     func dataCard() -> some View {
         self
             .frame(minHeight: CardDimensions.minHeight)
             .padding(CardDimensions.padding)
             .background(Color.surface)
-            .cornerRadius(CornerRadius.medium)
+            .cornerRadius(CornerRadius.small)
             .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                RoundedRectangle(cornerRadius: CornerRadius.small)
                     .stroke(Color.borderPrimary, lineWidth: 1)
             )
     }
     
-    /// Compact data card for smaller content
+    /// Compact technical panel
     func compactCard() -> some View {
         self
             .padding(CardDimensions.padding)
             .background(Color.surface)
-            .cornerRadius(CornerRadius.medium)
+            .cornerRadius(CornerRadius.small)
             .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                RoundedRectangle(cornerRadius: CornerRadius.small)
                     .stroke(Color.borderPrimary, lineWidth: 1)
             )
     }
     
-    /// Elevated surface for important content
+    /// Elevated technical surface
     func elevatedSurface() -> some View {
         self
             .padding(CardDimensions.padding)
             .background(Color.surfaceElevated)
-            .cornerRadius(CornerRadius.medium)
+            .cornerRadius(CornerRadius.small)
             .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                RoundedRectangle(cornerRadius: CornerRadius.small)
                     .stroke(Color.borderPrimary, lineWidth: 1)
             )
     }
     
-    /// Subtle divider line
+    /// Technical table row container
+    func tableRow() -> some View {
+        self
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.md)
+            .background(Color.surface)
+            .overlay(
+                Rectangle()
+                    .fill(Color.divider)
+                    .frame(height: 1),
+                alignment: .bottom
+            )
+    }
+    
+    /// Structured divider line
     func divider() -> some View {
         self
             .overlay(
@@ -160,6 +190,14 @@ extension View {
                     .frame(height: 1),
                 alignment: .top
             )
+    }
+    
+    /// Technical section header
+    func sectionHeader() -> some View {
+        self
+            .font(.labelUppercase)
+            .foregroundColor(.textTertiary)
+            .tracking(0.5)
     }
 }
 

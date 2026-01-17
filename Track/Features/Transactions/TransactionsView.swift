@@ -4,10 +4,6 @@ import SwiftData
 struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
-    @Query private var categories: [Category]
-    
-    @State private var selectedTransaction: Transaction?
-    @State private var showEditSheet = false
     
     var body: some View {
         Group {
@@ -31,33 +27,23 @@ struct TransactionsView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                 ForEach(groupedTransactions.keys.sorted(by: >), id: \.self) { date in
-                            // Date header
+                            // Technical section header
                             HStack {
                                 Text(formatDate(date))
-                                    .font(.label)
-                                    .foregroundColor(.textTertiary)
-                                    .tracking(1.5)
+                                    .sectionHeader()
                                 Spacer()
-                                Text("\(groupedTransactions[date]?.count ?? 0) transaction\(groupedTransactions[date]?.count == 1 ? "" : "s")")
-                                    .font(.caption)
+                                Text("\(groupedTransactions[date]?.count ?? 0)")
+                                    .font(.numericSmall)
                                     .foregroundColor(.textTertiary)
                             }
-                            .padding(.horizontal, Spacing.lg)
-                            .padding(.vertical, Spacing.md)
-                            .background(Color.backgroundSecondary)
+                            .tableRow()
                             
-                            // Transactions for this date
+                            // Structured transaction rows
                             ForEach(Array((groupedTransactions[date] ?? []).enumerated()), id: \.element.id) { index, transaction in
-                            TransactionRow(transaction: transaction)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    selectedTransaction = transaction
-                                    showEditSheet = true
-                                    }
-                                    .padding(.horizontal, Spacing.lg)
-                                    .padding(.vertical, Spacing.sm)
+                                TransactionRow(transaction: transaction)
+                                    .tableRow()
                                     .background(index % 2 == 0 ? Color.backgroundPrimary : Color.backgroundSecondary)
-                                }
+                            }
                         }
                     }
                     .padding(.bottom, 80) // Space for bottom nav
@@ -65,15 +51,6 @@ struct TransactionsView: View {
                 }
             }
             .background(Color.backgroundPrimary)
-            .sheet(isPresented: $showEditSheet) {
-                if let transaction = selectedTransaction {
-                    EditTransactionSheet(
-                        transaction: transaction,
-                        categories: categories,
-                        isPresented: $showEditSheet
-                    )
-            }
-        }
     }
     
     private var groupedTransactions: [Date: [Transaction]] {
@@ -100,40 +77,40 @@ struct TransactionRow: View {
     let transaction: Transaction
     
     var body: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.lg) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(transaction.merchantClean)
-                    .font(.bodyEmphasized)
+                    .font(.body)
                     .foregroundColor(.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: Spacing.sm) {
-                    Text(transaction.categoryNameSnapshot)
-                        .font(.caption)
-                        .foregroundColor(.textTertiary)
+                    Text(transaction.categoryNameSnapshot.uppercased())
+                        .font(.labelSmall)
+                        .foregroundColor(.textSecondary)
                         .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 2)
                         .background(Color.surface)
                         .cornerRadius(CornerRadius.small)
                     if transaction.isSubscription {
-                        HStack(spacing: 2) {
-                        Image(systemName: "arrow.clockwise")
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.clockwise")
                                 .font(.captionSmall)
-                                .foregroundColor(.accent)
+                                .foregroundColor(.textTertiary)
                             Text("RECURRING")
                                 .font(.labelSmall)
-                                .foregroundColor(.accent)
+                                .foregroundColor(.textTertiary)
                         }
+                        .allowsHitTesting(false)
                     }
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-            Text(formatCurrency(transaction.amountCents))
-                .font(.numeric)
+                Text(formatCurrency(transaction.amountCents))
+                    .font(.numeric)
                     .foregroundColor(transaction.amountCents >= 0 ? .accentSecondary : .textPrimary)
             }
         }
-        .padding(.vertical, Spacing.sm)
     }
     
     private func formatCurrency(_ cents: Int) -> String {
@@ -146,112 +123,3 @@ struct TransactionRow: View {
     }
 }
 
-struct EditTransactionSheet: View {
-    @Bindable var transaction: Transaction
-    let categories: [Category]
-    @Binding var isPresented: Bool
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var selectedCategoryId: UUID
-    @State private var note: String
-    @State private var isSubscription: Bool
-    
-    @Environment(\.modelContext) private var modelContext
-    
-    init(transaction: Transaction, categories: [Category], isPresented: Binding<Bool>) {
-        self.transaction = transaction
-        self.categories = categories
-        _isPresented = isPresented
-        _selectedCategoryId = State(initialValue: transaction.categoryId)
-        _note = State(initialValue: transaction.note ?? "")
-        _isSubscription = State(initialValue: transaction.isSubscription)
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("EDIT TRANSACTION")
-                    .font(.headerSmall)
-                    .foregroundColor(.textPrimary)
-                Spacer()
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.body)
-                        .foregroundColor(.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(Spacing.lg)
-            .divider()
-            
-            Form {
-                Section {
-                    Menu {
-                        ForEach(categories) { category in
-                            Button(category.name) {
-                                selectedCategoryId = category.id
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text("Category")
-                                .font(.body)
-                                .foregroundColor(.textPrimary)
-                            Spacer()
-                            Text(categories.first(where: { $0.id == selectedCategoryId })?.name ?? "Unknown")
-                                .font(.body)
-                                .foregroundColor(.textSecondary)
-                        }
-                    }
-                }
-                
-                Section {
-                    Toggle("Subscription", isOn: $isSubscription)
-                        .font(.body)
-                    TextField("Note", text: $note, axis: .vertical)
-                        .lineLimit(3...6)
-                        .foregroundColor(.textPrimary)
-                        .font(.body)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.backgroundPrimary)
-            
-            // Footer with save button
-            HStack(spacing: Spacing.md) {
-                    Button("Cancel") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(.textSecondary)
-                
-                Spacer()
-                
-                    Button("Save") {
-                        saveTransaction()
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.accent)
-            }
-            .padding(Spacing.lg)
-            .divider()
-        }
-        .background(Color.backgroundPrimary)
-        .frame(width: 520, height: 420)
-    }
-    
-    private func saveTransaction() {
-        if let category = categories.first(where: { $0.id == selectedCategoryId }) {
-            transaction.categoryId = category.id
-            transaction.categoryNameSnapshot = category.name
-        }
-        transaction.note = note.isEmpty ? nil : note
-        transaction.isSubscription = isSubscription
-        
-        try? modelContext.save()
-        dismiss()
-    }
-}

@@ -4,23 +4,12 @@ final class OnDeviceLLMClient: LLMClient {
     private static let modelDirectoryName = "phi-3.5-mini-instruct-MLX"
     
     private var mlxClient: MLXLLMClient?
-    private let fallbackClient = LocalLLMStub()
+    private let fallbackClient = FallbackLLMClient()
     
     init() {
         if let modelURL = Self.getModelURL() {
             mlxClient = MLXLLMClient(modelURL: modelURL)
         }
-    }
-    
-    func categorize(merchant: String, amount: Int) async throws -> String {
-        if let mlxClient = mlxClient {
-            do {
-                return try await mlxClient.categorize(merchant: merchant, amount: amount)
-            } catch {
-                // Fallback to stub if inference fails
-            }
-        }
-        return try await fallbackClient.categorize(merchant: merchant, amount: amount)
     }
     
     func generateInsight(transactionSummary: String) async throws -> String {
@@ -32,14 +21,6 @@ final class OnDeviceLLMClient: LLMClient {
             }
         }
         return try await fallbackClient.generateInsight(transactionSummary: transactionSummary)
-    }
-    
-    func reloadModel() {
-        if let modelURL = Self.getModelURL() {
-            mlxClient = MLXLLMClient(modelURL: modelURL)
-        } else {
-            mlxClient = nil
-        }
     }
     
     /// Check if the MLX model is available

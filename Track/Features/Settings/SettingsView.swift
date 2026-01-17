@@ -14,83 +14,45 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Spacing.lg) {
-                // Smart Categorization
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("SMART CATEGORIZATION")
-                        .font(.label)
-                        .foregroundColor(.textTertiary)
-                        .tracking(1.5)
-                    
-                    Toggle("Smart Categorization", isOn: Binding(
-                        get: { appState.smartCategorizationEnabled },
-                        set: { appState.updateSmartCategorization($0) }
-                    ))
-                    .toggleStyle(.switch)
-                    .tint(.accent)
-                    
-                    if appState.smartCategorizationEnabled {
-                        if OnDeviceLLMClient.isModelAvailable {
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.accentSecondary)
-                                Text("AI model available. Transactions will use AI categorization.")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                        } else {
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.textTertiary)
-                                Text("Model not available. Using rule-based matching only.")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                        }
-                    }
-                }
-                .padding(Spacing.lg)
-                .dataCard()
-                
-                // AI Model
+                // AI Model - Full width
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     Text("AI MODEL")
-                        .font(.label)
-                        .foregroundColor(.textTertiary)
-                        .tracking(1.5)
+                        .sectionHeader()
                     
-                    HStack {
+                    HStack(alignment: .top, spacing: Spacing.md) {
                         Image(systemName: "brain.head.profile")
-                            .font(.system(size: 24))
+                            .font(.system(size: 28))
                             .foregroundColor(.accent)
+                            .frame(width: 40, height: 40)
+                        
                         VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("Phi-3.5-mini-instruct")
-                                .font(.bodyEmphasized)
-                                .foregroundColor(.textPrimary)
+                            HStack(spacing: Spacing.md) {
+                                Text("Phi-3.5-mini-instruct")
+                                    .font(.bodyEmphasized)
+                                    .foregroundColor(.textPrimary)
+                                
+                                if OnDeviceLLMClient.isModelAvailable {
+                                    HStack(spacing: 6) {
+                                        Circle()
+                                            .fill(Color.accentSecondary)
+                                            .frame(width: 8, height: 8)
+                                        Text("Ready")
+                                            .font(.bodySmall)
+                                            .foregroundColor(.accentSecondary)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .padding(.horizontal, Spacing.sm)
+                                    .padding(.vertical, 4)
+                                    .background(Color.accentSecondary.opacity(0.15))
+                                    .cornerRadius(CornerRadius.small)
+                                }
+                            }
                             Text("Q4 • \(OnDeviceLLMClient.getModelSize())")
                                 .font(.caption)
                                 .foregroundColor(.textSecondary)
                         }
+                        
                         Spacer()
-                    }
-                    
-                    Divider()
-                        .background(Color.divider)
-                    
-                    HStack {
-                        Text("Status")
-                            .font(.body)
-                            .foregroundColor(.textSecondary)
-                        Spacer()
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: OnDeviceLLMClient.isModelAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(OnDeviceLLMClient.isModelAvailable ? .accentSecondary : .textTertiary)
-                            Text(OnDeviceLLMClient.isModelAvailable ? "Ready" : "Not Ready")
-                                .font(.bodySmall)
-                                .foregroundColor(.textSecondary)
-                        }
                     }
                     
                     if !OnDeviceLLMClient.isModelAvailable {
@@ -105,7 +67,7 @@ struct SettingsView: View {
                                 .font(.captionSmall)
                                 .foregroundColor(.textTertiary)
                             Button("Show Diagnostics") {
-                                let (_, diagnostics) = ModelVerification.verifySetup()
+                                let (_, diagnostics) = ModelVerificationService.verifySetup()
                                 print("📋 Model Setup Diagnostics:\n\(diagnostics)")
                             }
                             .font(.caption)
@@ -113,110 +75,117 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                             .padding(.top, Spacing.xs)
                         }
+                        .padding(.top, Spacing.sm)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minHeight: 160)
                 .padding(Spacing.lg)
                 .dataCard()
                 
-                // Bank Connection
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("BANK CONNECTION")
-                        .font(.label)
-                        .foregroundColor(.textTertiary)
-                        .tracking(1.5)
-                    
-                    HStack {
-                        Text("Status")
-                            .font(.body)
-                            .foregroundColor(.textSecondary)
-                        Spacer()
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.accentSecondary)
-                            Text("Connected")
-                                .font(.bodySmall)
-                                .foregroundColor(.textSecondary)
-                        }
-                    }
-                    
-                    Divider()
-                        .background(Color.divider)
-                    
-                    Button("Disconnect") {
-                        // TODO: Implement disconnect
-                    }
-                    .foregroundColor(.textPrimary)
-                    .buttonStyle(.bordered)
-                }
-                .padding(Spacing.lg)
-                .dataCard()
-                
-                // Data
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("DATA")
-                        .font(.label)
-                        .foregroundColor(.textTertiary)
-                        .tracking(1.5)
-                    
-                    VStack(spacing: Spacing.sm) {
-                        Button("Generate Mock Data") {
-                            Task {
-                                await generateMockData()
-                            }
-                        }
-                        .foregroundColor(.accent)
-                        .buttonStyle(.bordered)
-                        .tint(.accent)
-                        .frame(maxWidth: .infinity)
+                // Bank Connection and Data - Side by side
+                HStack(alignment: .top, spacing: Spacing.lg) {
+                    // Bank Connection
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("BANK CONNECTION")
+                            .sectionHeader()
                         
-                        Button("Export All Data") {
-                            exportAllData()
+                        HStack(alignment: .top, spacing: Spacing.md) {
+                            Image(systemName: "building.columns.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.accent)
+                                .frame(width: 40, height: 40)
+                            
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                HStack(spacing: Spacing.md) {
+                                    Text("Primary Account")
+                                        .font(.bodyEmphasized)
+                                        .foregroundColor(.textPrimary)
+                                    
+                                    HStack(spacing: 6) {
+                                        Circle()
+                                            .fill(Color.accentSecondary)
+                                            .frame(width: 8, height: 8)
+                                        Text("Connected")
+                                            .font(.bodySmall)
+                                            .foregroundColor(.accentSecondary)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .padding(.horizontal, Spacing.sm)
+                                    .padding(.vertical, 4)
+                                    .background(Color.accentSecondary.opacity(0.15))
+                                    .cornerRadius(CornerRadius.small)
+                                }
+                                Text("Last synced: Today")
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        
+                        Button("Disconnect") {
+                            // TODO: Implement disconnect
                         }
                         .foregroundColor(.textPrimary)
                         .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
-                        
-                        Button(role: .destructive, action: {
-                            showResetAlert = true
-                        }) {
-                            Text("Reset All Data")
-                        }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
+                        .padding(.top, Spacing.sm)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 160)
+                    .padding(Spacing.lg)
+                    .dataCard()
+                    
+                    // Data
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("DATA")
+                            .sectionHeader()
+                        
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Button("Generate Mock Data") {
+                                Task {
+                                    await generateMockData()
+                                }
+                            }
+                            .foregroundColor(.accent)
+                            .buttonStyle(.bordered)
+                            .tint(.accent)
+                            
+                            Button("Export All Data") {
+                                exportAllData()
+                            }
+                            .foregroundColor(.textPrimary)
+                            .buttonStyle(.bordered)
+                            
+                            Button(role: .destructive, action: {
+                                showResetAlert = true
+                            }) {
+                                Text("Reset All Data")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 160)
+                    .padding(Spacing.lg)
+                    .dataCard()
                 }
-                .padding(Spacing.lg)
-                .dataCard()
                 
-                // Privacy
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("PRIVACY")
-                        .font(.label)
-                        .foregroundColor(.textTertiary)
-                        .tracking(1.5)
-                    Text("All data is stored locally on your device. No tracking, no cloud sync, no external services.")
-                        .font(.caption)
-                        .foregroundColor(.textSecondary)
-                        .lineSpacing(4)
-                }
-                .padding(Spacing.lg)
-                .dataCard()
             }
             .padding(Spacing.lg)
             .padding(.bottom, 80) // Space for bottom nav
-        }
-        .background(Color.backgroundPrimary)
-        .alert("Reset All Data", isPresented: $showResetAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
-                resetAllData()
             }
-        } message: {
-            Text("This will delete all transactions, budgets, and categories. This action cannot be undone.")
-        }
-        .sheet(item: $exportData) { data in
-            ShareSheet(activityItems: [data.jsonData])
+            .background(Color.backgroundPrimary)
+            .alert("Reset All Data", isPresented: $showResetAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    resetAllData()
+                }
+            } message: {
+                Text("This will delete all transactions and categories. This action cannot be undone.")
+            }
+            .sheet(item: $exportData) { data in
+                ShareSheet(activityItems: [data.jsonData])
         }
     }
     
@@ -267,9 +236,7 @@ struct SettingsView: View {
     
     private func generateMockData() async {
         let categoryRepository = CategoryRepository(modelContext: modelContext)
-        let llmClient = appState.createLLMClient()
         let categorizationService = CategorizationService(
-            llmClient: llmClient,
             categoryRepository: categoryRepository
         )
         let mockDataService = MockDataService(
@@ -332,7 +299,7 @@ struct ShareSheet: View {
                         let pasteboard = NSPasteboard.general
                         pasteboard.clearContents()
                         pasteboard.setString(jsonString, forType: .string)
-                    }
+    }
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)

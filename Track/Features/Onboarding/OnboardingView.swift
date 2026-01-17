@@ -4,7 +4,6 @@ struct OnboardingView: View {
     @ObservedObject var appState: AppState
     @State private var currentPage = 0
     @State private var monthlyBudget: String = ""
-    @State private var smartCategorizationEnabled = true
     
     var body: some View {
         TabView(selection: $currentPage) {
@@ -58,17 +57,12 @@ struct OnboardingView: View {
                     .padding(Spacing.md)
                     .dataCard()
                     
-                    Toggle("Smart Categorization", isOn: $smartCategorizationEnabled)
-                        .foregroundColor(.textPrimary)
                 }
                 .padding(Spacing.xl)
                 
                 Button(action: {
                     let budget = monthlyBudget.isEmpty ? nil : Int(Double(monthlyBudget) ?? 0) * 100
-                    appState.completeOnboarding(
-                        monthlyBudget: budget,
-                        smartCategorizationEnabled: smartCategorizationEnabled
-                    )
+                    appState.completeOnboarding(monthlyBudget: budget)
                 }) {
                     Text("Get Started")
                         .font(.headline)

@@ -4,11 +4,9 @@ import SwiftData
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var transactions: [Transaction]
-    @Query private var budgets: [Budget]
     @Query private var insights: [Insight]
     
     @StateObject private var appState: AppState
-    @State private var budgetStatus: BudgetStatus = .onTrack
     @State private var monthToDateTotal: Int = 0
     @State private var momChange: Double = 0
     @State private var categorySpending: [(name: String, value: Double, color: Color)] = []
@@ -18,12 +16,10 @@ struct HomeView: View {
     
     private var insightsService: InsightsService {
         let transactionRepository = TransactionRepository(modelContext: modelContext)
-        let budgetRepository = BudgetRepository(modelContext: modelContext)
         let insightRepository = InsightRepository(modelContext: modelContext)
         let llmClient = appState.createLLMClient()
         return InsightsService(
             transactionRepository: transactionRepository,
-            budgetRepository: budgetRepository,
             insightRepository: insightRepository,
             llmClient: llmClient
         )
@@ -34,15 +30,14 @@ struct HomeView: View {
     }
     
     var body: some View {
-            ScrollView {
+        GeometryReader { geometry in
+            let availableHeight = geometry.size.height - 80 - (Spacing.lg * 3) - 140
                 VStack(spacing: Spacing.lg) {
-                // Header with budget status - Full width card
-                HStack(alignment: .top, spacing: Spacing.xl) {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                // Technical metrics header - balanced spacing
+                HStack(alignment: .top, spacing: Spacing.xxl) {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
                         Text("MONTH TO DATE")
-                            .font(.label)
-                            .foregroundColor(.textTertiary)
-                            .tracking(1.5)
+                            .sectionHeader()
                         Text(formatCurrency(monthToDateTotal))
                             .font(.numericXLarge)
                             .foregroundColor(.textPrimary)
@@ -50,7 +45,7 @@ struct HomeView: View {
                             HStack(spacing: Spacing.xs) {
                                 Image(systemName: momChange >= 0 ? "arrow.up.right" : "arrow.down.right")
                                     .font(.captionSmall)
-                                    .foregroundColor(momChange >= 0 ? .textSecondary : .accentError)
+                                    .foregroundColor(momChange >= 0 ? .accentSecondary : .accentError)
                                 Text("\(String(format: "%.1f", abs(momChange)))% vs last month")
                                 .font(.caption)
                                     .foregroundColor(momChange >= 0 ? .textSecondary : .accentError)
@@ -59,24 +54,12 @@ struct HomeView: View {
                         }
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: Spacing.sm) {
-                        Text("STATUS")
-                            .font(.label)
-                            .foregroundColor(.textTertiary)
-                            .tracking(1.5)
-                        Text(budgetStatus.text)
-                            .font(.numericLarge)
-                            .foregroundColor(budgetStatus.color)
-                            .tracking(3)
-                    }
                 }
+                    .padding(Spacing.lg)
                 .dataCard()
-                
-                // Grid layout for data cards - Equal height
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: Spacing.lg),
-                    GridItem(.flexible(), spacing: Spacing.lg)
-                ], spacing: Spacing.lg) {
+                    
+                // Grid layout for data cards - Fill to bottom
+                HStack(alignment: .top, spacing: Spacing.lg) {
                     // Spending by Category
                     Button(action: {
                         showCategoryDetail = true
@@ -84,9 +67,7 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             HStack {
                                 Text("SPENDING BY CATEGORY")
-                                    .font(.label)
-                                    .foregroundColor(.textTertiary)
-                                    .tracking(1.5)
+                                    .sectionHeader()
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
@@ -128,8 +109,10 @@ struct HomeView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(Spacing.xxl)
                             }
+                            
+                            Spacer(minLength: 0)
                         }
-                        .frame(maxWidth: .infinity, minHeight: CardDimensions.standardHeight, alignment: .top)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
                     .buttonStyle(.plain)
                     .dataCard()
@@ -138,9 +121,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: Spacing.md) {
                         HStack {
                             Text("AI INSIGHT")
-                                .font(.label)
-                                .foregroundColor(.textTertiary)
-                                .tracking(1.5)
+                                .sectionHeader()
                             Spacer()
                             Button(action: {
                                 Task {
@@ -151,41 +132,59 @@ struct HomeView: View {
                             }) {
                                 if isGeneratingInsight {
                                     ProgressView()
-                                        .scaleEffect(0.7)
+                                        .scaleEffect(0.8)
                                         .tint(.accent)
+                                        .frame(width: 20, height: 20)
                                 } else {
                                     Image(systemName: "arrow.clockwise")
-                                        .font(.caption)
-                                        .foregroundColor(.accent)
-                                }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.textPrimary)
+                                        .frame(width: 36, height: 36)
+                                        .background(Color.accent)
+                                        .clipShape(Circle())
+                                        .shadow(color: .accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                    }
                             }
                             .buttonStyle(.plain)
                             .disabled(isGeneratingInsight)
                         }
                         
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
                     if let insight = currentInsight {
-                            Text(insight.text)
-                                .font(.bodySmall)
+                                    // Parse and display as bullet points
+                                    let bulletPoints = parseBulletPoints(insight.text)
+                                    ForEach(Array(bulletPoints.enumerated()), id: \.offset) { index, point in
+                                        HStack(alignment: .top, spacing: Spacing.sm) {
+                                            Text("•")
+                                                .font(.body)
+                                                .foregroundColor(.accent)
+                                            Text(point)
+                                .font(.body)
                                 .foregroundColor(.textSecondary)
-                                .lineSpacing(6)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else {
-                            VStack(alignment: .leading, spacing: Spacing.xs) {
-                                Text("Tap refresh to generate insights based on your transactions.")
-                                    .font(.bodySmall)
-                                    .foregroundColor(.textTertiary)
-                                    .lineSpacing(6)
+                                                .lineSpacing(4)
+                                        }
+                                    }
+                                } else {
+                                    Text("Tap refresh to generate insights based on your transactions.")
+                                        .font(.bodySmall)
+                                        .foregroundColor(.textTertiary)
+                                        .lineSpacing(6)
+                                }
                             }
                         }
+                        
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, minHeight: CardDimensions.standardHeight, alignment: .top)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .dataCard()
                 }
-            }
-            .padding(Spacing.lg)
+                .frame(height: max(availableHeight, CardDimensions.standardHeight))
+                }
+                .padding(Spacing.lg)
             .padding(.bottom, 80) // Space for bottom nav
-        }
-        .background(Color.backgroundPrimary)
+            }
+            .background(Color.backgroundPrimary)
             .onAppear {
                 Task {
                     await loadData()
@@ -252,13 +251,6 @@ struct HomeView: View {
             (name: item.key, value: Double(item.value), color: colors[index % colors.count])
         })
         
-        // Load budget status
-        do {
-            budgetStatus = try await insightsService.calculateBudgetStatus(for: now)
-        } catch {
-            budgetStatus = .onTrack
-        }
-        
         // Load existing insight if available
         do {
             let insightRepository = InsightRepository(modelContext: modelContext)
@@ -275,12 +267,11 @@ struct HomeView: View {
         let calendar = Calendar.current
         let now = Date()
         
+        print("🔄 [HomeView] Starting insight generation...")
         do {
-            let insight = try await insightsService.generateInsight(
-                for: now,
-                smartCategorizationEnabled: appState.smartCategorizationEnabled
-            )
+            let insight = try await insightsService.generateInsight(for: now)
             currentInsight = insight
+            print("✅ [HomeView] Insight generated and displayed in UI")
         } catch {
             let monthStart = calendar.dateInterval(of: .month, for: now)?.start ?? now
             if monthToDateTotal > 0 {
@@ -311,6 +302,46 @@ struct HomeView: View {
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
         return formatter.string(from: NSNumber(value: dollars)) ?? "$0.00"
+    }
+    
+    private func parseBulletPoints(_ text: String) -> [String] {
+        // Parse bullet points from text (handles •, -, or numbered lists)
+        let lines = text.components(separatedBy: .newlines)
+        var points: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { continue }
+            
+            // Check for bullet point markers
+            if trimmed.hasPrefix("•") || trimmed.hasPrefix("-") || trimmed.hasPrefix("*") {
+                let point = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+                if !point.isEmpty {
+                    points.append(point)
+                }
+            } else if trimmed.range(of: #"^\d+[\.\)]\s"#, options: .regularExpression) != nil {
+                // Numbered list item
+                let point = trimmed.replacingOccurrences(of: #"^\d+[\.\)]\s"#, with: "", options: .regularExpression)
+                if !point.isEmpty {
+                    points.append(point)
+                }
+            } else if !points.isEmpty {
+                // Continue previous point if no bullet marker
+                points[points.count - 1] += " " + trimmed
+            } else {
+                // First line without bullet - treat as single point
+                points.append(trimmed)
+            }
+        }
+        
+        // If no bullet points found, split by sentences
+        if points.isEmpty {
+            let sentences = text.components(separatedBy: ". ")
+            points = sentences.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ".", with: "") }
+        }
+        
+        return points
     }
 }
 
@@ -372,8 +403,8 @@ struct CategoryDetailModal: View {
                     }
                     .padding(Spacing.lg)
                 }
+                }
             }
-        }
             .background(Color.backgroundPrimary)
         .frame(width: 650, height: 650)
     }

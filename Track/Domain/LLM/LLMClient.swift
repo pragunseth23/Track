@@ -15,6 +15,5 @@ enum LLMError: Error, LocalizedError {
 }
 
 protocol LLMClient {
-    func categorize(merchant: String, amount: Int) async throws -> String
     func generateInsight(transactionSummary: String) async throws -> String
 }

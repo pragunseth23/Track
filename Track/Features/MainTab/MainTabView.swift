@@ -6,11 +6,10 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTab: Int = 0
     
-    private let tabs: [NavTab] = [
-        NavTab(title: "Home", icon: "chart.line.uptrend.xyaxis"),
-        NavTab(title: "Transactions", icon: "list.bullet"),
-        NavTab(title: "Budgets", icon: "chart.bar.fill"),
-        NavTab(title: "Settings", icon: "gearshape.fill")
+    private let tabs: [NavigationTab] = [
+        NavigationTab(title: "Home", icon: "chart.line.uptrend.xyaxis"),
+        NavigationTab(title: "Transactions", icon: "list.bullet"),
+        NavigationTab(title: "Settings", icon: "gearshape.fill")
     ]
     
     var body: some View {
@@ -24,21 +23,19 @@ struct MainTabView: View {
                 Group {
                     switch selectedTab {
                     case 0:
-            HomeView(appState: appState)
+                        HomeView(appState: appState)
                     case 1:
-            TransactionsView()
+                        TransactionsView()
                     case 2:
-                        BudgetsView()
-                    case 3:
-            SettingsView(appState: appState)
+                        SettingsView(appState: appState)
                     default:
                         HomeView(appState: appState)
                 }
         }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Liquid glass bottom nav bar
-                LiquidGlassNavBar(selectedTab: $selectedTab, tabs: tabs)
+                // Bottom navigation bar
+                BottomNavigationBar(selectedTab: $selectedTab, tabs: tabs)
             }
         }
         .onAppear {

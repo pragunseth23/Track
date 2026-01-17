@@ -46,7 +46,26 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
     /// Initialize Python environment and ensure mlx-lm is available
     nonisolated private func ensurePythonEnvironment() throws {
         try Self.ensurePythonInitialized()
-        _ = try Python.attemptImport("mlx_lm")
+        let mlx_lm = try Python.attemptImport("mlx_lm")
+        
+        // Verify GPU/Metal is available (MLX uses GPU by default on Apple Silicon)
+        do {
+            let mlx = try Python.attemptImport("mlx.core")
+            // Check if GPU is available
+            let hasGPU = try mlx.metal.is_available()
+            // Convert Python bool to Swift Bool
+            if Bool(hasGPU) == true {
+                // Get current default device to verify
+                let currentDevice = mlx.default_device()
+                print("✅ [MLXLLMClient] GPU (Metal) is available")
+                print("✅ [MLXLLMClient] Current device: \(currentDevice)")
+                // MLX automatically uses GPU on Apple Silicon, no need to set explicitly
+            } else {
+                print("⚠️ [MLXLLMClient] GPU (Metal) not available, will use CPU")
+            }
+        } catch {
+            print("⚠️ [MLXLLMClient] Could not verify GPU device: \(error.localizedDescription)")
+        }
     }
     
     /// Load the model and tokenizer if not already loaded
@@ -74,6 +93,7 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
                     try self.ensurePythonEnvironment()
                     
                     let mlx_lm = try Python.attemptImport("mlx_lm")
+                    let mlx = try Python.attemptImport("mlx.core")
                     let modelPath = self.modelURL.path
                     
                     // Verify required files exist
@@ -85,11 +105,20 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
                         }
                     }
                     
-                    // Load model and tokenizer
+                    // Verify GPU availability (MLX uses GPU by default on Apple Silicon)
+                    let hasGPU = try mlx.metal.is_available()
+                    if Bool(hasGPU) == true {
+                        print("✅ [MLXLLMClient] Loading model on GPU (Metal)")
+                    } else {
+                        print("⚠️ [MLXLLMClient] GPU not available, loading on CPU")
+                    }
+                    
+                    // Load model and tokenizer (will use default device set above)
                     let loaded = mlx_lm.load(PythonObject(modelPath))
                     self.pythonModel = loaded[0]
                     self.pythonTokenizer = loaded[1]
                     
+                    print("✅ [MLXLLMClient] Model loaded successfully")
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: LLMError.modelLoadFailed("Failed to load model: \(error.localizedDescription)"))
@@ -98,54 +127,46 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
         }
     }
     
-    func categorize(merchant: String, amount: Int) async throws -> String {
-        try await ensureModelLoaded()
-        
-        let prompt = """
-        <|user|>
-        You are a financial transaction categorization assistant. Analyze the following transaction and suggest the most appropriate spending category.
-        
-        Merchant: \(merchant)
-        Amount: $\(String(format: "%.2f", Double(abs(amount)) / 100.0))
-        
-        Respond with only a JSON object in this format:
-        {"category": "CategoryName"}
-        
-        Suggest a clear, specific category name (e.g., "Coffee", "Groceries", "Transport", "Entertainment", "Food", "Shopping", "Bills", "Health", "Education", "Travel", "Subscriptions", etc.). Choose the most appropriate category based on the merchant name and amount.<|end|>
-        <|assistant|>
-        """
-        
-        let response = try await generateResponse(prompt: prompt, maxTokens: 128)
-        
-        if let category = JSONGuard.extractCategory(from: response) {
-            return category
-        }
-        
-        return extractCategoryFromText(response)
-    }
-    
     func generateInsight(transactionSummary: String) async throws -> String {
         try await ensureModelLoaded()
         
+        print("🤖 [MLXLLMClient] Generating AI insight from transaction summary...")
+        print("📋 [MLXLLMClient] Summary length: \(transactionSummary.count) characters")
+        
+        // Add variety by including different analysis angles
+        let analysisAngles = [
+            "Focus on spending efficiency and optimization opportunities",
+            "Highlight trends and patterns with actionable recommendations",
+            "Emphasize category-specific insights and spending patterns",
+            "Analyze subscription costs and recurring expense optimization",
+            "Compare month-over-month changes with specific improvement areas"
+        ]
+        let selectedAngle = analysisAngles.randomElement() ?? analysisAngles[0]
+        
         let prompt = """
         <|user|>
-        You are an expert financial advisor analyzing personal spending data. Provide a detailed, actionable insight (4-6 sentences) that:
-        1. Identifies key spending patterns and trends
-        2. Highlights notable changes or anomalies
-        3. Provides specific, actionable recommendations
-        4. Mentions specific categories or amounts when relevant
-        5. Suggests concrete ways to improve financial health
+        You are an expert financial advisor analyzing personal spending data. Provide a concise, actionable financial insight in bullet point format (4-6 bullet points).
         
-        Be specific, helpful, and conversational. Focus on insights the user can act on immediately.
+        Analysis focus: \(selectedAngle)
+        
+        Requirements:
+        - Format as bullet points (use • or -)
+        - Each bullet should be specific and actionable
+        - Mention specific categories, amounts, or percentages when relevant
+        - Provide variety in recommendations (not all the same type)
+        - Be creative and insightful, not generic
+        - Keep each bullet point to 1-2 sentences max
         
         Transaction Summary:
         \(transactionSummary)
         
-        Provide your detailed financial insight:<|end|>
+        Provide your financial insight in bullet point format:<|end|>
         <|assistant|>
         """
         
-        return try await generateResponse(prompt: prompt, maxTokens: 512)
+        let response = try await generateResponse(prompt: prompt, maxTokens: 512)
+        print("✅ [MLXLLMClient] AI insight generation completed")
+        return response
     }
     
     // MARK: - Helper methods
@@ -159,6 +180,11 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
             DispatchQueue.main.async {
                 do {
                     let mlx_lm = try Python.attemptImport("mlx_lm")
+                    let mlx = try Python.attemptImport("mlx.core")
+                    
+                    // MLX automatically uses GPU on Apple Silicon for generation
+                    // No explicit device setting needed
+                    
                     // mlx_lm.generate() signature: generate(model, tokenizer, prompt, max_tokens=...)
                     // Note: temperature parameter may not be supported in all versions
                     let response = mlx_lm.generate(
@@ -177,16 +203,4 @@ nonisolated final class MLXLLMClient: LLMClient, @unchecked Sendable {
         }
     }
     
-    private func extractCategoryFromText(_ text: String) -> String {
-        let lowercased = text.lowercased()
-        let commonCategories = ["coffee", "groceries", "food", "transport", "entertainment", "shopping", "bills", "health", "education", "travel", "subscriptions", "other"]
-        
-        for category in commonCategories {
-            if lowercased.contains(category) {
-                return category.capitalized
-            }
-        }
-        
-        return "Other"
-    }
 }

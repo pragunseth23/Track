@@ -1,7 +1,7 @@
 import Foundation
 
-/// Helper to verify model setup and provide diagnostic information
-enum ModelVerification {
+/// Service to verify model setup and provide diagnostic information
+enum ModelVerificationService {
     static func verifySetup() -> (isAvailable: Bool, diagnostics: String) {
         var diagnostics: [String] = []
         var isAvailable = false

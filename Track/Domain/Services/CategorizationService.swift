@@ -2,50 +2,20 @@ import Foundation
 
 @MainActor
 final class CategorizationService {
-    private let llmClient: LLMClient
     private let categoryRepository: CategoryRepositoryProtocol
     
-    init(llmClient: LLMClient, categoryRepository: CategoryRepositoryProtocol) {
-        self.llmClient = llmClient
+    init(categoryRepository: CategoryRepositoryProtocol) {
         self.categoryRepository = categoryRepository
     }
     
     func categorize(
         merchant: String,
-        amount: Int,
-        smartCategorizationEnabled: Bool
+        amount: Int
     ) async throws -> Category {
         // Normalize merchant name
         let normalized = normalizeMerchant(merchant)
         
-        // If smart categorization is enabled, always use LLM
-        if smartCategorizationEnabled {
-            do {
-                let llmResponse = try await llmClient.categorize(
-                    merchant: normalized,
-                    amount: amount
-                )
-                
-                // Parse LLM response
-                if let parsedCategory = JSONGuard.extractCategory(from: llmResponse) {
-                    // Find or create the category
-                    let allCategories = try await categoryRepository.fetchAll()
-                    if let existingCategory = allCategories.first(where: { $0.name == parsedCategory }) {
-                        return existingCategory
-                    } else {
-                        // Create new category suggested by Gemma
-                        let newCategory = Category(name: parsedCategory, isSystem: false)
-                        try await categoryRepository.save(newCategory)
-                        return newCategory
-                    }
-                }
-            } catch {
-                print("⚠️ [CategorizationService] LLM categorization failed: \(error.localizedDescription), falling back to rule-based")
-                // Fall through to rule-based fallback
-            }
-        }
-        
-        // Fallback to rule-based categorization
+        // Use rule-based categorization only
         let (categoryName, _) = ruleBasedCategorization(normalized, amount: amount)
         
         // Find or create category

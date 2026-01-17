@@ -6,7 +6,6 @@ import Combine
 final class AppState: ObservableObject {
     @Published var hasCompletedOnboarding: Bool
     @Published var monthlyBudget: Int?
-    @Published var smartCategorizationEnabled: Bool
     
     private let userDefaults: UserDefaults
     
@@ -14,24 +13,16 @@ final class AppState: ObservableObject {
         self.userDefaults = userDefaults
         self.hasCompletedOnboarding = userDefaults.bool(forKey: "hasCompletedOnboarding")
         self.monthlyBudget = userDefaults.object(forKey: "monthlyBudget") as? Int
-        self.smartCategorizationEnabled = userDefaults.bool(forKey: "smartCategorizationEnabled")
     }
     
-    func completeOnboarding(monthlyBudget: Int?, smartCategorizationEnabled: Bool) {
+    func completeOnboarding(monthlyBudget: Int?) {
         self.hasCompletedOnboarding = true
         self.monthlyBudget = monthlyBudget
-        self.smartCategorizationEnabled = smartCategorizationEnabled
         
         userDefaults.set(true, forKey: "hasCompletedOnboarding")
         if let budget = monthlyBudget {
             userDefaults.set(budget, forKey: "monthlyBudget")
         }
-        userDefaults.set(smartCategorizationEnabled, forKey: "smartCategorizationEnabled")
-    }
-    
-    func updateSmartCategorization(_ enabled: Bool) {
-        self.smartCategorizationEnabled = enabled
-        userDefaults.set(enabled, forKey: "smartCategorizationEnabled")
     }
     
     func createLLMClient() -> LLMClient {

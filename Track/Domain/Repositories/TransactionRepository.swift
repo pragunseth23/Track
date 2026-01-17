@@ -5,7 +5,6 @@ protocol TransactionRepositoryProtocol {
     func fetchAll() async throws -> [Transaction]
     func fetchByDateRange(start: Date, end: Date) async throws -> [Transaction]
     func fetchByCategory(_ categoryId: UUID) async throws -> [Transaction]
-    func fetchSubscriptions() async throws -> [Transaction]
     func save(_ transaction: Transaction) async throws
     func delete(_ transaction: Transaction) async throws
     func update(_ transaction: Transaction) async throws
@@ -40,16 +39,6 @@ final class TransactionRepository: TransactionRepositoryProtocol {
         let descriptor = FetchDescriptor<Transaction>(
             predicate: #Predicate<Transaction> { transaction in
                 transaction.categoryId == categoryId
-            },
-            sortBy: [SortDescriptor(\.date, order: .reverse)]
-        )
-        return try modelContext.fetch(descriptor)
-    }
-    
-    func fetchSubscriptions() async throws -> [Transaction] {
-        let descriptor = FetchDescriptor<Transaction>(
-            predicate: #Predicate<Transaction> { transaction in
-                transaction.isSubscription == true
             },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )

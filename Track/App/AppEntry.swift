@@ -33,7 +33,7 @@ struct TrackApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
-        .modelContainer(for: [Transaction.self, Category.self, Budget.self, Insight.self])
+        .modelContainer(for: [Transaction.self, Category.self, Insight.self])
     }
     
     private static func initializePythonSafely() {

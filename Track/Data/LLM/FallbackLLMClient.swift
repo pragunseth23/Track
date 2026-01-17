@@ -1,11 +1,6 @@
 import Foundation
 
-final class LocalLLMStub: LLMClient {
-    func categorize(merchant: String, amount: Int) async throws -> String {
-        // Deterministic fallback - returns "Other" as default
-        return "Other"
-    }
-    
+final class FallbackLLMClient: LLMClient {
     func generateInsight(transactionSummary: String) async throws -> String {
         // Fallback insight - parse summary and provide basic analysis
         // This is a simple fallback when the AI model isn't available

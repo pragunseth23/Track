@@ -125,11 +125,10 @@ final class MockDataService {
             let date = calendar.date(byAdding: .day, value: -mock.daysAgo, to: today) ?? today
             
             do {
-                // Use CategorizationService to categorize (this will use Gemma if Smart Categorization is enabled)
+                // Use CategorizationService to categorize
                 let category = try await categorizationService.categorize(
                     merchant: mock.merchantRaw,
-                    amount: mock.amountCents,
-                    smartCategorizationEnabled: true // Always enable for mock data to test AI
+                    amount: mock.amountCents
                 )
                 
                 // Normalize merchant name (CategorizationService does this, but we'll use it for merchantClean)
